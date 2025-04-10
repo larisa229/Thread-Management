@@ -1,6 +1,6 @@
 package GUI;
 import dataModel.Server;
-import dataModel.Task;
+import dataModel.Client;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -184,7 +184,7 @@ public class SimulationFrame extends Application {
         startButton.setDisable(false);
     }
 
-    public void updateUI(int currentTime, List<Server> servers, List<Task> waitingTasks) {
+    public void updateUI(int currentTime, List<Server> servers, List<Client> waitingTasks) {
         javafx.application.Platform.runLater(() -> {
             logArea.appendText(String.format("\nTime: %d\n", currentTime));
 
@@ -192,8 +192,8 @@ public class SimulationFrame extends Application {
             if (waitingTasks.isEmpty()) {
                 logArea.appendText("none\n");
             } else {
-                for (Task task : waitingTasks) {
-                    logArea.appendText(task.toString() + " ");
+                for (Client client : waitingTasks) {
+                    logArea.appendText(client.toString() + " ");
                 }
                 logArea.appendText("\n");
             }
@@ -204,12 +204,12 @@ public class SimulationFrame extends Application {
                 if (server.isClosed()) {
                     logArea.appendText("Closed\n");
                 } else {
-                    Task[] tasks = server.getTasks();
-                    if (tasks.length == 0) {
+                    Client[] clients = server.getClients();
+                    if (clients.length == 0) {
                         logArea.appendText("empty\n");
                     } else {
-                        for (Task task : tasks) {
-                            logArea.appendText(task.toString() + " ");
+                        for (Client client : clients) {
+                            logArea.appendText(client.toString() + " ");
                         }
                         logArea.appendText("\n");
                     }

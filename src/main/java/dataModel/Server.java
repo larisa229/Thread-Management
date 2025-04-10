@@ -1,19 +1,27 @@
 package dataModel;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server implements Runnable {
 
-    private final BlockingQueue<Task> tasks;
+    private final BlockingQueue<Client> clients;
     private final AtomicInteger waitingPeriod;
-    private boolean isRunning;
+    private volatile boolean isRunning;
+    private final List<Client> servedClients = new ArrayList<>();
+    private volatile int currentSimulationTime;
 
     public Server() {
-        tasks = new LinkedBlockingQueue<>();
+        clients = new LinkedBlockingQueue<>();
         waitingPeriod = new AtomicInteger(0);
         isRunning = true;
+    }
+
+    public void updateSimulationTime(int time) {
+        this.currentSimulationTime = time;
     }
 
     @Override
@@ -21,11 +29,18 @@ public class Server implements Runnable {
         System.out.println("Server thread started: " + Thread.currentThread().getName());
         while(isRunning) {
             try {
-                Task t = tasks.peek();
-                if(t != null) {
-                    t.setServiceTime(t.getServiceTime() - 1);
-                    if(t.getServiceTime() <= 0) {
-                        tasks.poll();
+                Client c = clients.peek();
+                if(c != null) {
+                    if (c.getStartTime() == -1) {
+                        c.setStartTime(currentSimulationTime);
+                        int waitingTime = currentSimulationTime - c.getArrivalTime();
+                        c.setWaitingTime(waitingTime);
+                        System.out.println("Client " + c.getId() + " starts at " + currentSimulationTime + " (waited " + waitingTime + ")");
+                    }
+                    c.setServiceTime(c.getServiceTime() - 1);
+                    if(c.getServiceTime() <= 0) {
+                        servedClients.add(clients.poll());
+                        //clients.poll();
                     }
                 waitingPeriod.decrementAndGet();
                 }
@@ -37,18 +52,22 @@ public class Server implements Runnable {
         }
     }
 
+    public List<Client> getServedClients() {
+        return servedClients;
+    }
+
     public void stop() {
         isRunning = false;
     }
 
-    public Task[] getTasks() {
-        return tasks.toArray(new Task[0]);
+    public Client[] getClients() {
+        return clients.toArray(new Client[0]);
     }
 
-    public void addTask(Task newTask) {
-        tasks.add(newTask);
-        waitingPeriod.addAndGet(newTask.getServiceTime());
-        System.out.println("Task " + newTask.getId() + " added to server. New waiting period: " + waitingPeriod.get());
+    public void addClient(Client newClient) {
+        clients.add(newClient);
+        waitingPeriod.addAndGet(newClient.getServiceTime());
+        System.out.println("Client " + newClient.getId() + " added to server. New waiting period: " + waitingPeriod.get());
     }
 
     public AtomicInteger getWaitingPeriod() {
@@ -56,6 +75,6 @@ public class Server implements Runnable {
     }
 
     public boolean isClosed() {
-        return tasks.isEmpty();
+        return clients.isEmpty();
     }
 }

@@ -1,7 +1,7 @@
 package businessLogic;
 
+import dataModel.Client;
 import dataModel.Server;
-import dataModel.Task;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +35,9 @@ public class Scheduler {
         }
     }
 
-    public void dispatchTask(Task task) {
+    public void dispatchClient(Client client) {
         if(strategy != null) {
-            strategy.addTask(servers, task);
+            strategy.addClient(servers, client);
         } else {
             System.err.println("Strategy not set.");
         }

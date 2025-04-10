@@ -3,7 +3,7 @@ package businessLogic;
 import GUI.SimulationFrame;
 import dataAccess.Logger;
 import dataModel.Server;
-import dataModel.Task;
+import dataModel.Client;
 
 import java.util.*;
 
@@ -20,11 +20,12 @@ public class SimulationManager implements Runnable {
 
     private Scheduler scheduler;
     private SimulationFrame frame;
-    private List<Task> generatedTasks;
+    private List<Client> generatedClients;
 
     private int totalServiceTime = 0;
     private int peakHour = 0;
     private int maxClientAtTime = 0;
+    private int totalWaitingTime = 0;
 
     public SimulationManager(int simulationInterval, int minServiceTime, int maxServiceTime,
                              int minArrivalTime, int maxArrivalTime, int numberOfClients, int numberOfServers, SelectionPolicy selectionPolicy) {
@@ -39,7 +40,7 @@ public class SimulationManager implements Runnable {
         this.scheduler = new Scheduler(numberOfServers, numberOfClients);
         this.scheduler.changeStrategy(selectionPolicy);
         this.frame = new SimulationFrame();
-        generateNRandomTasks();
+        generateNRandomClients();
         //hardcodedExample();
     }
 
@@ -47,75 +48,76 @@ public class SimulationManager implements Runnable {
         this.frame = frame;
     }
 
-    private void generateNRandomTasks() {
-        generatedTasks = new ArrayList<>();
+    private void generateNRandomClients() {
+        generatedClients = new ArrayList<>();
         Random rand = new Random();
 
         for(int i = 0; i < numberOfClients; i++) {
             int arrivalTime = rand.nextInt(maxArrivalTime - minArrivalTime + 1) + minArrivalTime;
             int serviceTime = rand.nextInt(maxServiceTime - minServiceTime + 1) + minServiceTime;
-            Task newTask = new Task(i + 1, arrivalTime, serviceTime);
-            generatedTasks.add(newTask);
+            Client newClient = new Client(i + 1, arrivalTime, serviceTime);
+            generatedClients.add(newClient);
         }
 
-        Collections.sort(generatedTasks, Comparator.comparingInt(Task::getArrivalTime));
+        Collections.sort(generatedClients, Comparator.comparingInt(Client::getArrivalTime));
     }
 
     private void hardcodedExample() {
-        generatedTasks = new ArrayList<>();
-        generatedTasks.add(new Task(1, 2, 2));
-        generatedTasks.add(new Task(2, 3, 3));
-        generatedTasks.add(new Task(3, 4, 3));
-        generatedTasks.add(new Task(4, 10, 2));
-        numberOfClients = generatedTasks.size();
+        generatedClients = new ArrayList<>();
+        generatedClients.add(new Client(1, 2, 2));
+        generatedClients.add(new Client(2, 2, 3));
+        generatedClients.add(new Client(3, 2, 3));
+        generatedClients.add(new Client(4, 2, 2));
+        numberOfClients = generatedClients.size();
     }
 
     @Override
     public void run() {
         Logger.init("log.txt");
         int currentTime = 0;
-        while(currentTime <= simulationInterval && !(generatedTasks.isEmpty() && allServersEmpty())) {
-            List<Task> tasksToRemove = new ArrayList<>();
-            for(Task task : generatedTasks) {
-                if(task.getArrivalTime() == currentTime) {
-                    scheduler.dispatchTask(task);
-                    totalServiceTime += task.getServiceTime();
-                    tasksToRemove.add(task);
-                } else if(task.getArrivalTime() < currentTime) {
-                    task.incrementWaitingTime();
+        while(currentTime <= simulationInterval && !(generatedClients.isEmpty() && allServersEmpty())) {
+            for (Server server : scheduler.getServers()) {
+                server.updateSimulationTime(currentTime);
+            }
+            List<Client> clientsToRemove = new ArrayList<>();
+            for(Client client : generatedClients) {
+                if(client.getArrivalTime() == currentTime) {
+                    scheduler.dispatchClient(client);
+                    totalServiceTime += client.getServiceTime();
+                    clientsToRemove.add(client);
                 }
             }
-            generatedTasks.removeAll(tasksToRemove);
-            frame.updateUI(currentTime, scheduler.getServers(), generatedTasks);
-
+            generatedClients.removeAll(clientsToRemove);
+            frame.updateUI(currentTime, scheduler.getServers(), generatedClients);
             int currentClients = 0;
             for(Server server : scheduler.getServers()) {
-                currentClients += server.getTasks().length;
+                currentClients += server.getClients().length;
             }
             if(currentClients > maxClientAtTime) {
                 maxClientAtTime = currentClients;
                 peakHour = currentTime;
             }
             printCurrentState(currentTime);
-
             try {
                 Thread.sleep(1000);
             } catch(InterruptedException e) {
                 e.printStackTrace();
             }
-
             currentTime++;
-
-            if(generatedTasks.isEmpty() && allServersEmpty()) {
+            if(generatedClients.isEmpty() && allServersEmpty()) {
                 break;
             }
         }
-        int totalWaitingTime = 0;
-        for (Task task : generatedTasks) {
-            totalWaitingTime += task.getWaitingTime();
+        totalWaitingTime = 0;
+        int totalServedClients = 0;
+        for (Server server : scheduler.getServers()) {
+            for (Client client : server.getServedClients()) {
+                totalWaitingTime += client.getWaitingTime();
+                totalServedClients++;
+            }
         }
-        float avgWaitingTime = (float)totalWaitingTime / numberOfClients;
-        float avgServiceTime = (float)totalServiceTime / numberOfClients;
+        float avgWaitingTime = (totalServedClients > 0) ? (float)totalWaitingTime / totalServedClients : 0;
+        float avgServiceTime = (numberOfClients > 0) ? (float)totalServiceTime / numberOfClients : 0;
         frame.displayResults(avgWaitingTime, avgServiceTime, peakHour);
         printStatistics(totalWaitingTime);
         scheduler.stopServers();
@@ -135,11 +137,11 @@ public class SimulationManager implements Runnable {
         Logger.log("Current time: " + currentTime + " / " + simulationInterval + "\n");
 
         Logger.log("Waiting clients: ");
-        if(generatedTasks.isEmpty()) {
+        if(generatedClients.isEmpty()) {
             Logger.log("None");
         }
-        for(Task task : generatedTasks) {
-            Logger.log(task + "; ");
+        for(Client c : generatedClients) {
+            Logger.log(c + "; ");
         }
         Logger.log("\n");
 
@@ -149,8 +151,8 @@ public class SimulationManager implements Runnable {
             if(server.isClosed()) {
                 Logger.log("Closed");
             } else {
-                for(Task task : server.getTasks()) {
-                    Logger.log(task + "; ");
+                for(Client c : server.getClients()) {
+                    Logger.log(c + "; ");
                 }
             }
             Logger.log("\n");

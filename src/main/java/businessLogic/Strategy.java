@@ -1,10 +1,10 @@
 package businessLogic;
 
+import dataModel.Client;
 import dataModel.Server;
-import dataModel.Task;
 import java.util.List;
 
 public interface Strategy {
 
-    void addTask(List<Server> servers, Task t);
+    void addClient(List<Server> servers, Client c);
 }
