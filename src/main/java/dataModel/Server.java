@@ -35,12 +35,10 @@ public class Server implements Runnable {
                         c.setStartTime(currentSimulationTime);
                         int waitingTime = currentSimulationTime - c.getArrivalTime();
                         c.setWaitingTime(waitingTime);
-                        System.out.println("Client " + c.getId() + " starts at " + currentSimulationTime + " (waited " + waitingTime + ")");
                     }
                     c.setServiceTime(c.getServiceTime() - 1);
                     if(c.getServiceTime() <= 0) {
                         servedClients.add(clients.poll());
-                        //clients.poll();
                     }
                 waitingPeriod.decrementAndGet();
                 }

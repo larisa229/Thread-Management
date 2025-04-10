@@ -40,7 +40,6 @@ public class SimulationFrame extends Application {
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Queue Simulation System");
-
         GridPane inputGrid = createInputGrid();
 
         logArea = new TextArea();
@@ -55,11 +54,11 @@ public class SimulationFrame extends Application {
         resultsBox = new VBox(5);
         resultsBox.setPadding(new Insets(10));
         resultsBox.setStyle("-fx-border-color: #cccccc; -fx-border-width: 1px;");
-        avgWaitingLabel = new Label("Average Waiting Time: -");
-        avgServiceLabel = new Label("Average Service Time: -");
-        peakHourLabel = new Label("Peak Hour: -");
+        avgWaitingLabel = new Label("Average Waiting Time -");
+        avgServiceLabel = new Label("Average Service Time -");
+        peakHourLabel = new Label("Peak Hour -");
         resultsBox.getChildren().addAll(
-                new Label("Simulation Results:"),
+                new Label("Simulation Results"),
                 avgWaitingLabel,
                 avgServiceLabel,
                 peakHourLabel
@@ -67,17 +66,8 @@ public class SimulationFrame extends Application {
 
         VBox mainLayout = new VBox(15);
         mainLayout.setPadding(new Insets(15));
-        mainLayout.getChildren().addAll(
-                new Label("Simulation Parameters:"),
-                inputGrid,
-                buttonBox,
-                new Label("Simulation Log:"),
-                logArea,
-                resultsBox
-        );
-
+        mainLayout.getChildren().addAll(new Label("Simulation Parameters:"), inputGrid, buttonBox, new Label("Simulation Log:"), logArea, resultsBox);
         setupEventHandlers();
-
         primaryStage.setScene(new Scene(mainLayout, 700, 700));
         primaryStage.show();
     }
@@ -100,20 +90,20 @@ public class SimulationFrame extends Application {
         strategyCombo.getItems().addAll(SelectionPolicy.SHORTEST_QUEUE, SelectionPolicy.SHORTEST_TIME);
         strategyCombo.setValue(SelectionPolicy.SHORTEST_TIME);
 
-        grid.add(new Label("Simulation Interval (sec):"), 0, 0);
-        grid.add(simIntervalField, 1, 0);
-        grid.add(new Label("Min Service Time:"), 0, 1);
-        grid.add(minServiceField, 1, 1);
-        grid.add(new Label("Max Service Time:"), 0, 2);
-        grid.add(maxServiceField, 1, 2);
+        grid.add(new Label("Number of Clients:"), 0, 0);
+        grid.add(clientsField, 1, 0);
+        grid.add(new Label("Number of Servers:"), 0, 1);
+        grid.add(serversField, 1, 1);
+        grid.add(new Label("Simulation Interval (sec):"), 0, 2);
+        grid.add(simIntervalField, 1, 2);
         grid.add(new Label("Min Arrival Time:"), 0, 3);
         grid.add(minArrivalField, 1, 3);
         grid.add(new Label("Max Arrival Time:"), 0, 4);
         grid.add(maxArrivalField, 1, 4);
-        grid.add(new Label("Number of Clients:"), 0, 5);
-        grid.add(clientsField, 1, 5);
-        grid.add(new Label("Number of Servers:"), 0, 6);
-        grid.add(serversField, 1, 6);
+        grid.add(new Label("Min Service Time:"), 0, 5);
+        grid.add(minServiceField, 1, 5);
+        grid.add(new Label("Max Service Time:"), 0, 6);
+        grid.add(maxServiceField, 1, 6);
         grid.add(new Label("Selection Strategy:"), 0, 7);
         grid.add(strategyCombo, 1, 7);
 
@@ -146,10 +136,7 @@ public class SimulationFrame extends Application {
 
             startButton.setDisable(true);
 
-            simulationManager = new SimulationManager(
-                    simInterval, minService, maxService,
-                    minArrival, maxArrival, clients, servers, strategy
-            );
+            simulationManager = new SimulationManager(simInterval, minService, maxService, minArrival, maxArrival, clients, servers, strategy);
             simulationManager.setFrame(this);
 
             simulationThread = new Thread(simulationManager);

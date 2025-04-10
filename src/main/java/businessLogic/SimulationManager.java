@@ -36,39 +36,14 @@ public class SimulationManager implements Runnable {
         this.maxArrivalTime = maxArrivalTime;
         this.numberOfClients = numberOfClients;
         this.numberOfServers = numberOfServers;
-
         this.scheduler = new Scheduler(numberOfServers, numberOfClients);
         this.scheduler.changeStrategy(selectionPolicy);
         this.frame = new SimulationFrame();
         generateNRandomClients();
-        //hardcodedExample();
     }
 
     public void setFrame(SimulationFrame frame) {
         this.frame = frame;
-    }
-
-    private void generateNRandomClients() {
-        generatedClients = new ArrayList<>();
-        Random rand = new Random();
-
-        for(int i = 0; i < numberOfClients; i++) {
-            int arrivalTime = rand.nextInt(maxArrivalTime - minArrivalTime + 1) + minArrivalTime;
-            int serviceTime = rand.nextInt(maxServiceTime - minServiceTime + 1) + minServiceTime;
-            Client newClient = new Client(i + 1, arrivalTime, serviceTime);
-            generatedClients.add(newClient);
-        }
-
-        Collections.sort(generatedClients, Comparator.comparingInt(Client::getArrivalTime));
-    }
-
-    private void hardcodedExample() {
-        generatedClients = new ArrayList<>();
-        generatedClients.add(new Client(1, 2, 2));
-        generatedClients.add(new Client(2, 2, 3));
-        generatedClients.add(new Client(3, 2, 3));
-        generatedClients.add(new Client(4, 2, 2));
-        numberOfClients = generatedClients.size();
     }
 
     @Override
@@ -79,24 +54,8 @@ public class SimulationManager implements Runnable {
             for (Server server : scheduler.getServers()) {
                 server.updateSimulationTime(currentTime);
             }
-            List<Client> clientsToRemove = new ArrayList<>();
-            for(Client client : generatedClients) {
-                if(client.getArrivalTime() == currentTime) {
-                    scheduler.dispatchClient(client);
-                    totalServiceTime += client.getServiceTime();
-                    clientsToRemove.add(client);
-                }
-            }
-            generatedClients.removeAll(clientsToRemove);
-            frame.updateUI(currentTime, scheduler.getServers(), generatedClients);
-            int currentClients = 0;
-            for(Server server : scheduler.getServers()) {
-                currentClients += server.getClients().length;
-            }
-            if(currentClients > maxClientAtTime) {
-                maxClientAtTime = currentClients;
-                peakHour = currentTime;
-            }
+            dispatchArrivedClients(currentTime);
+            updateUIAndTrackPeak(currentTime);
             printCurrentState(currentTime);
             try {
                 Thread.sleep(1000);
@@ -104,24 +63,68 @@ public class SimulationManager implements Runnable {
                 e.printStackTrace();
             }
             currentTime++;
-            if(generatedClients.isEmpty() && allServersEmpty()) {
-                break;
-            }
+            if(generatedClients.isEmpty() && allServersEmpty()) break;
         }
+        computeWaitingTime();
+        frame.displayResults(getAverageWaitingTime(), getAverageServiceTime(), peakHour);
+        printStatistics(totalWaitingTime);
+        scheduler.stopServers();
+        Logger.close();
+    }
+
+    private void generateNRandomClients() {
+        generatedClients = new ArrayList<>();
+        Random rand = new Random();
+        for(int i = 0; i < numberOfClients; i++) {
+            int arrivalTime = rand.nextInt(maxArrivalTime - minArrivalTime + 1) + minArrivalTime;
+            int serviceTime = rand.nextInt(maxServiceTime - minServiceTime + 1) + minServiceTime;
+            Client newClient = new Client(i + 1, arrivalTime, serviceTime);
+            generatedClients.add(newClient);
+        }
+        Collections.sort(generatedClients, Comparator.comparingInt(Client::getArrivalTime));
+    }
+
+    private void computeWaitingTime() {
         totalWaitingTime = 0;
         int totalServedClients = 0;
-        for (Server server : scheduler.getServers()) {
-            for (Client client : server.getServedClients()) {
+        for(Server server : scheduler.getServers()) {
+            for(Client client : server.getServedClients()) {
                 totalWaitingTime += client.getWaitingTime();
                 totalServedClients++;
             }
         }
-        float avgWaitingTime = (totalServedClients > 0) ? (float)totalWaitingTime / totalServedClients : 0;
-        float avgServiceTime = (numberOfClients > 0) ? (float)totalServiceTime / numberOfClients : 0;
-        frame.displayResults(avgWaitingTime, avgServiceTime, peakHour);
-        printStatistics(totalWaitingTime);
-        scheduler.stopServers();
-        Logger.close();
+    }
+
+    private void dispatchArrivedClients(int currentTime) {
+        List<Client> clientsToRemove = new ArrayList<>();
+        for (Client client : generatedClients) {
+            if (client.getArrivalTime() == currentTime) {
+                scheduler.dispatchClient(client);
+                totalServiceTime += client.getServiceTime();
+                clientsToRemove.add(client);
+            }
+        }
+        generatedClients.removeAll(clientsToRemove);
+    }
+
+    private void updateUIAndTrackPeak(int currentTime) {
+        frame.updateUI(currentTime, scheduler.getServers(), generatedClients);
+        int currentClients = 0;
+        for (Server server : scheduler.getServers()) {
+            currentClients += server.getClients().length;
+        }
+        if (currentClients > maxClientAtTime) {
+            maxClientAtTime = currentClients;
+            peakHour = currentTime;
+        }
+    }
+
+    private float getAverageWaitingTime() {
+        return numberOfClients > 0 ? (float) totalWaitingTime / numberOfClients : 0;
+    }
+
+    private float getAverageServiceTime() {
+        return numberOfClients > 0 ? (float) totalServiceTime / numberOfClients : 0;
     }
 
     private boolean allServersEmpty() {
@@ -135,7 +138,6 @@ public class SimulationManager implements Runnable {
 
     private void printCurrentState(int currentTime) {
         Logger.log("Current time: " + currentTime + " / " + simulationInterval + "\n");
-
         Logger.log("Waiting clients: ");
         if(generatedClients.isEmpty()) {
             Logger.log("None");
@@ -144,7 +146,6 @@ public class SimulationManager implements Runnable {
             Logger.log(c + "; ");
         }
         Logger.log("\n");
-
         int serverId = 1;
         for(Server server : scheduler.getServers()) {
             Logger.log("Queue " + serverId + ": ");
