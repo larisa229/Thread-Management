@@ -40,11 +40,17 @@ public class SimulationFrame extends Application {
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Queue Simulation System");
+
         GridPane inputGrid = createInputGrid();
 
         logArea = new TextArea();
         logArea.setEditable(false);
         logArea.setPrefHeight(300);
+        logArea.setPrefWidth(400);
+
+        HBox inputAndLogBox = new HBox(15);
+        inputAndLogBox.setPadding(new Insets(10));
+        inputAndLogBox.getChildren().addAll(inputGrid, logArea);
 
         HBox buttonBox = new HBox(10);
         startButton = new Button("Start Simulation");
@@ -54,9 +60,9 @@ public class SimulationFrame extends Application {
         resultsBox = new VBox(5);
         resultsBox.setPadding(new Insets(10));
         resultsBox.setStyle("-fx-border-color: #cccccc; -fx-border-width: 1px;");
-        avgWaitingLabel = new Label("Average Waiting Time -");
-        avgServiceLabel = new Label("Average Service Time -");
-        peakHourLabel = new Label("Peak Hour -");
+        avgWaitingLabel = new Label("Average Waiting Time: -");
+        avgServiceLabel = new Label("Average Service Time: -");
+        peakHourLabel = new Label("Peak Hour: -");
         resultsBox.getChildren().addAll(
                 new Label("Simulation Results"),
                 avgWaitingLabel,
@@ -66,9 +72,15 @@ public class SimulationFrame extends Application {
 
         VBox mainLayout = new VBox(15);
         mainLayout.setPadding(new Insets(15));
-        mainLayout.getChildren().addAll(new Label("Simulation Parameters:"), inputGrid, buttonBox, new Label("Simulation Log:"), logArea, resultsBox);
+        mainLayout.getChildren().addAll(
+                new Label("Simulation Parameters:"),
+                inputAndLogBox,
+                buttonBox,
+                resultsBox
+        );
+
         setupEventHandlers();
-        primaryStage.setScene(new Scene(mainLayout, 700, 700));
+        primaryStage.setScene(new Scene(mainLayout, 850, 600));
         primaryStage.show();
     }
 
