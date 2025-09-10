@@ -40,7 +40,7 @@ public class Server implements Runnable {
                     if(c.getServiceTime() <= 0) {
                         servedClients.add(clients.poll());
                     }
-                waitingPeriod.decrementAndGet();
+                    waitingPeriod.decrementAndGet();
                 }
                 Thread.sleep(1000);
             } catch(InterruptedException e) {
